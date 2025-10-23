@@ -1,0 +1,108 @@
+<PlusConfiguration version="2.9" PlusRevision="PlusApp-2.9.0.20250912-spryTrack-Telemed-Win64">
+
+  <!-- Devices for data collection -->
+  <DataCollection StartupDelaySec="1.0">
+    <DeviceSet Name="PlusServer: UKBB Atracsys spryTrack 180 and SuperSonic MACH 30 L18-5 CALIBRATION"
+      Description="Calibration configuration file for tracking data from the Atracsys spryTrack 180 and video feed from the SuperSonic MACH 30 using the ultrasound probe L18-5 and the Elgato CAM LINK 4K.&#10;Broadcasting the acquired data through an OpenIGTLink."
+    />
+	
+	<!-- Atracsys spryTrack configuration -->
+	<!-- The following parameter has become internal in the latest Plus Toolkit version: -->
+    <!-- ActiveMarkerPairingTimeSec="15" -->
+    <Device
+      Id="TrackerDevice"
+      Type="AtracsysTracker"
+      MaxMissingFiducials="1"
+      MaxMeanRegistrationErrorMm="1.0"
+      ToolReferenceFrame="Tracker"
+	  LocalTimeOffsetSec="0.114">
+      <DataSources>
+		<DataSource Type="Tool" Id="Probe" TrackingType="PASSIVE" GeometryFile="AtracsysTools/geometry302.ini" />
+		<DataSource Type="Tool" Id="Stylus" TrackingType="PASSIVE" GeometryFile="AtracsysTools/geometry1000.ini" />
+      </DataSources>
+      <OutputChannels>
+        <OutputChannel Id="TrackerStream">
+		  <DataSource Type="Tool" Id="Probe" />
+		  <DataSource Type="Tool" Id="Stylus" />
+        </OutputChannel>
+      </OutputChannels>
+    </Device>
+	
+	<!-- Ultrasound video device configuration, CaptureDeviceId=0 corresponds to the laptop's built-in webcam -->
+	<!-- PortUsImageOrientation may be "UN", "UF", "MF", "MN", ... -->
+	<!-- Added AcquisitionRate="60", BufferSize is recommended to be 5*AcquisitionRate -->
+	 <Device Id="VideoDevice" Type="MmfVideo" AcquisitionRate="60" FrameSize="1920 1080" VideoFormat="YUY2" CaptureDeviceId="1">
+      <DataSources>
+        <DataSource
+          Type="Video"
+          Id="Video"
+          PortUsImageOrientation="UN"
+          ClipRectangleOrigin="240 120 0"
+          ClipRectangleSize="920 880 1"
+          BufferSize="300" />
+      </DataSources>
+      <OutputChannels>
+        <OutputChannel Id="VideoStream" VideoDataSourceId="Video" />
+      </OutputChannels>
+    </Device>
+	
+	<!-- Ultrasound video and Atracsys spryTrack mixer -->
+	<Device Id="TrackedVideoDevice" Type="VirtualMixer">
+      <InputChannels>
+        <InputChannel Id="TrackerStream" />
+        <InputChannel Id="VideoStream" />
+      </InputChannels>
+      <OutputChannels>
+        <OutputChannel Id="TrackedVideoStream" />
+      </OutputChannels>
+    </Device>
+	
+  </DataCollection>
+
+
+  <!-- PlusIGT configuration -->
+  <PlusOpenIGTLinkServer
+    MaxNumberOfIgtlMessagesToSend="1"
+	MaxTimeSpentWithProcessingMs="50"
+    ListeningPort="18944"
+    SendValidTransformsOnly="TRUE"
+    OutputChannelId="TrackedVideoStream" >
+    <DefaultClientInfo>
+      <MessageTypes>
+	    <Message Type="IMAGE" />
+        <Message Type="TRANSFORM" />
+      </MessageTypes>
+      <TransformNames>
+		<Transform Name="ProbeToTracker" />
+		<Transform Name="StylusToTracker" />
+		<Transform Name="StylusToProbe" />
+      </TransformNames>
+	  <ImageNames>
+	    <Image Name="Image" EmbeddedTransformToFrame="Image" />
+	  </ImageNames>
+    </DefaultClientInfo>
+  </PlusOpenIGTLinkServer>
+  
+  <!-- fCal configuration -->
+  <fCal
+    StylusModelId="StylusModel"
+    ImageDisplayableObjectId="LiveImage"
+    NumberOfCalibrationImagesToAcquire="200"
+    NumberOfValidationImagesToAcquire="100"
+    NumberOfStylusCalibrationPointsToAcquire="200"
+    RecordingIntervalMs="100"
+    MaxTimeSpentWithProcessingMs="70"
+    ImageCoordinateFrame="Image"
+    ProbeCoordinateFrame="Probe"
+    ReferenceCoordinateFrame="Tracker"
+    TransducerOriginCoordinateFrame="TransducerOrigin"
+    TransducerOriginPixelCoordinateFrame="TransducerOriginPixel"
+    TemporalCalibrationDurationSec="20"
+    FixedChannelId="VideoStream"
+    FixedSourceId="Video"
+    MovingChannelId="TrackerStream"
+    MovingSourceId="ProbeToTracker"
+    DefaultSelectedChannelId="TrackedVideoStream"
+    FreeHandStartupDelaySec="5" />
+  
+</PlusConfiguration>

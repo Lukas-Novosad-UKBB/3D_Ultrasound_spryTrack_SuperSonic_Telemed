@@ -1,0 +1,113 @@
+<PlusConfiguration version="2.9" PlusRevision="PlusApp-2.9.0.20250912-spryTrack-Telemed-Win64">
+
+  <!-- Devices for data collection -->
+  <DataCollection StartupDelaySec="1.0">
+    <DeviceSet Name="PlusServer: UKBB Atracsys spryTrack 180 and Telemed ArtUs L12-5N40-A4 ACQUISITION"
+      Description="Acquisition configuration file for tracking data from the Atracsys spryTrack 180 and video feed from the Telemed ArtUs using the ultrasound probe L12-5N40-A4.&#10;Broadcasting the acquired data through an OpenIGTLink."
+    />
+	
+	<!-- Atracsys spryTrack configuration -->
+	<!-- The following parameter has become internal in the latest Plus Toolkit version: -->
+    <!-- ActiveMarkerPairingTimeSec="15" -->
+    <Device
+      Id="TrackerDevice"
+      Type="AtracsysTracker"
+      MaxMissingFiducials="1"
+      MaxMeanRegistrationErrorMm="1.0"
+      ToolReferenceFrame="Tracker"
+	  LocalTimeOffsetSec="0.016">
+      <DataSources>
+		<DataSource Type="Tool" Id="Probe" TrackingType="PASSIVE" GeometryFile="AtracsysTools/geometry302.ini" />
+      </DataSources>
+      <OutputChannels>
+        <OutputChannel Id="TrackerStream">
+		<DataSource Type="Tool" Id="Probe" />
+        </OutputChannel>
+      </OutputChannels>
+    </Device>
+	
+	<!-- Telemed video device configuration -->
+	<Device Id="VideoDevice" Type="TelemedVideo" >
+      <DataSources>
+        <DataSource Type="Video" Id="Video" PortUsImageOrientation="UN"  />
+      </DataSources>
+      <OutputChannels>
+        <OutputChannel Id="VideoStream" VideoDataSourceId="Video" />
+      </OutputChannels>
+    </Device>
+	
+	<!-- Telemed video capture configuration -->
+	<Device Id="CaptureDevice" Type="VirtualCapture" BaseFilename="RecordingTest.igs.mha" EnableCapturingOnStart="FALSE" >
+      <InputChannels>
+        <InputChannel Id="VideoStream" />
+      </InputChannels>
+    </Device>
+	
+	<!-- Telemed video and Atracsys spryTrack mixer -->
+	<Device Id="TrackedVideoDevice" Type="VirtualMixer">
+      <InputChannels>
+        <InputChannel Id="TrackerStream" />
+        <InputChannel Id="VideoStream" />
+      </InputChannels>
+      <OutputChannels>
+        <OutputChannel Id="TrackedVideoStream" />
+      </OutputChannels>
+    </Device>
+	
+  </DataCollection>
+  
+  <!-- Transforms -->
+<!--   <CoordinateDefinitions>
+    <Transform From="Image" To="Reference"
+      Matrix="
+        0.2 0.0 0.0 0.0
+        0.0 0.2 0.0 0.0
+        0.0 0.0 0.2 0.0
+        0 0 0 1" />
+  </CoordinateDefinitions> -->
+
+  <!-- PlusIGT configuration -->
+  <PlusOpenIGTLinkServer
+    MaxNumberOfIgtlMessagesToSend="1"
+	MaxTimeSpentWithProcessingMs="50"
+    ListeningPort="18944"
+    SendValidTransformsOnly="TRUE"
+    OutputChannelId="TrackedVideoStream" >
+    <DefaultClientInfo>
+      <MessageTypes>
+	    <Message Type="IMAGE" />
+        <Message Type="TRANSFORM" />
+      </MessageTypes>
+      <TransformNames>
+	    <Transform Name="ProbeToTracker" />
+      </TransformNames>
+	  <ImageNames>
+	    <!-- <Image Name="Image" EmbeddedTransformToFrame="Reference" /> -->
+		<Image Name="Image" EmbeddedTransformToFrame="Image" />
+	  </ImageNames>
+    </DefaultClientInfo>
+  </PlusOpenIGTLinkServer>
+  
+  <!-- fCal configuration -->
+  <fCal
+    StylusModelId="StylusModel"
+    ImageDisplayableObjectId="LiveImage"
+    NumberOfCalibrationImagesToAcquire="200"
+    NumberOfValidationImagesToAcquire="100"
+    NumberOfStylusCalibrationPointsToAcquire="200"
+    RecordingIntervalMs="100"
+    MaxTimeSpentWithProcessingMs="70"
+    ImageCoordinateFrame="Image"
+    ProbeCoordinateFrame="Probe"
+    ReferenceCoordinateFrame="Tracker"
+    TransducerOriginCoordinateFrame="TransducerOrigin"
+    TransducerOriginPixelCoordinateFrame="TransducerOriginPixel"
+    TemporalCalibrationDurationSec="20"
+    FixedChannelId="VideoStream"
+    FixedSourceId="Video"
+    MovingChannelId="TrackerStream"
+    MovingSourceId="ProbeToTracker"
+    DefaultSelectedChannelId="TrackedVideoStream"
+    FreeHandStartupDelaySec="5" />
+  
+</PlusConfiguration>
